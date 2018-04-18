@@ -13,11 +13,21 @@ import android.util.Log;
 import android.widget.ImageView;
 import android.widget.Toast;
 
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -52,8 +62,116 @@ public class MainActivity extends AppCompatActivity {
         return in;
     }
 
+    //Web Services
+    private String WordDefinition(String word) {
+        InputStream in = null;
+        String strDefinition = "";
+        try {
+            in = OpenHttpConnection(
+                    "http://services.aonaware.com" +
+                            "/DictService/DictService.asmx/Define?word=" + word);
+            Document doc = null;
+            DocumentBuilderFactory dbf =
+                    DocumentBuilderFactory.newInstance();
+            DocumentBuilder db;
+            try {
+                db = dbf.newDocumentBuilder();
+                doc = db.parse(in);
+            } catch (ParserConfigurationException e) {
+// TODO Auto-generated catch block
+                e.printStackTrace();
+            } catch (Exception e) {
+// TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+            doc.getDocumentElement().normalize();
+//---retrieve all the <Definition> elements---
+            NodeList definitionElements =
+                    doc.getElementsByTagName("Definition");
+//---iterate through each <Definition> elements---
+            for (int i = 0; i < definitionElements.getLength(); i++) {
+                Node itemNode = definitionElements.item(i);
+                if (itemNode.getNodeType() == Node.ELEMENT_NODE)
+                {
+//---convert the Definition node into an Element---
+                    Element definitionElement = (Element) itemNode;
+//---get all the <WordDefinition> elements under
+// the <Definition> element---
+                    NodeList wordDefinitionElements =
+                            (definitionElement).getElementsByTagName(
+                                    "WordDefinition");
+                    strDefinition = "";
+//---iterate through each <WordDefinition> elements---
+                    for (int j = 0; j < wordDefinitionElements.getLength(); j++) {
+//---convert a <WordDefinition> node into an Element---
+                        Element wordDefinitionElement =
+                                (Element) wordDefinitionElements.item(j);
+//---get all the child nodes under the
+// <WordDefinition> element---
+                        NodeList textNodes =
+                                ((Node) wordDefinitionElement).getChildNodes();
+                        strDefinition +=
+                                ((Node) textNodes.item(0)).getNodeValue() + ". \n";
+                    }
+                }
+            }
+        } catch (IOException e1) {
+            Log.d("NetworkingActivity", e1.getLocalizedMessage());
+        }
+//---return the definitions of the word---
+        return strDefinition;
+    }
+    private class AccessWebServiceTask extends AsyncTask<String, Void, String> {
+        protected String doInBackground(String... urls) {
+            return WordDefinition(urls[0]);
+        }
+        protected void onPostExecute(String result) {
+            Toast.makeText(getBaseContext(), result, Toast.LENGTH_LONG).show();
+        }
+    }
+
+    //Download plain text
+    /*private String DownloadText(String URL)
+    {
+        int BUFFER_SIZE = 2000;
+        InputStream in = null;
+        try {
+            in = OpenHttpConnection(URL);
+        } catch (IOException e) {
+            Log.d("Networking", e.getLocalizedMessage());
+            return "";
+        }
+        InputStreamReader isr = new InputStreamReader(in);
+        int charRead;
+        String str = "";
+        char[] inputBuffer = new char[BUFFER_SIZE];
+        try {
+            while ((charRead = isr.read(inputBuffer))>0) {
+//---convert the chars to a String---
+                String readString =
+                        String.copyValueOf(inputBuffer, 0, charRead);
+                str += readString;
+                inputBuffer = new char[BUFFER_SIZE];
+            }
+            in.close();
+        } catch (IOException e) {
+            Log.d("Networking", e.getLocalizedMessage());
+            return "";
+        }
+        return str;
+    }
+    private class DownloadTextTask extends AsyncTask<String, Void, String> {
+        protected String doInBackground(String... urls) {
+            return DownloadText(urls[0]);
+        }
+        @Override
+        protected void onPostExecute(String result) {
+            Toast.makeText(getBaseContext(), result, Toast.LENGTH_LONG).show();
+        }
+    }
+*/
     //Downloading Binary Data
-    private Bitmap DownloadImage(String URL)
+   /* private Bitmap DownloadImage(String URL)
     {
         Bitmap bitmap = null;
         InputStream in = null;
@@ -74,7 +192,7 @@ public class MainActivity extends AppCompatActivity {
             ImageView img = (ImageView) findViewById(R.id.imageView);
             img.setImageBitmap(result);
         }
-    }
+    }*/
 
     //Download multiple images
     /*private class DownloadImageTask extends AsyncTask
@@ -124,8 +242,15 @@ public class MainActivity extends AppCompatActivity {
                     new String[]{Manifest.permission.INTERNET},
                     REQUEST_INTERNET);
         } else{
-            new DownloadImageTask().execute(
-                    "https://3c1703fe8d.site.internapcdn.net/newman/gfx/news/hires/2013/morphobutter.jpg");
+            //Downloading Binary Data
+            /*new DownloadImageTask().execute(
+                    "https://3c1703fe8d.site.internapcdn.net/newman/gfx/news/hires/2013/morphobutter.jpg");*/
+
+            //Plain Text
+           /* new DownloadTextTask().execute("http://jfdimarzio.com/test.htm");*/
+
+           //Web Services
+            new AccessWebServiceTask().execute("apple");
         }
     }
 
@@ -152,7 +277,7 @@ Hartbeespoort.jpg",
         eiffel_tower_paris_france.jpg");
 }*/
 
-    @Override
+    /*@Override
     public void onRequestPermissionsResult(int requestCode,
                                            String[] permissions, int[] grantResults) {
         switch (requestCode) {
@@ -169,5 +294,5 @@ Hartbeespoort.jpg",
                 super.onRequestPermissionsResult(requestCode,
                         permissions, grantResults);
         }
-    }
+    }*/
 }
